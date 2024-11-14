@@ -76,6 +76,41 @@ int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsig
 void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg)
 {
 
+    if(RegWrite == 1)
+    {
+        if(MemtoReg == 1)
+        {
+            unsigned data;
+
+            // If MemtoReg is 1 && RegWrite is 1 then data is coming from memory (memdata)
+            if(MemtoReg == 1)
+            {
+                data = memdata;
+            }
+            else
+            {
+                // If MemtoReg is 0 && RegWrite is 1 then data is coming from ALU_result (ALUresult)
+                data = ALUresult;
+            }
+
+            
+
+            // Determine the register destination
+            
+            unsigned index;
+            if(RegDst == 1)
+            {
+                index = r3;
+            }
+            else
+            {
+                index = r2;
+            }
+
+            Reg[index] = data;
+        }
+    }
+
 }
 
 /* PC update */
