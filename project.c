@@ -68,6 +68,32 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem)
 {
 
+    if(MemWrite == 1)
+    {
+        // Check word alignment
+        if(ALUresult % 4 != 0)
+        {
+            return -1;
+        }
+
+        // write into memory
+        Mem[ALUresult >> 2] = data2;
+    }
+
+
+    if (MemRead == 1)
+    {
+        // Check word alignment
+        if(ALUresult % 4 != 0)
+        {
+            return -1;
+        }
+
+        // read from memory
+        *memdata = Mem[ALUresult >> 2];
+    }
+
+    return 0;
 }
 
 
