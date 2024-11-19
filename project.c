@@ -25,6 +25,7 @@ int instruction_fetch(unsigned PC, unsigned *Mem, unsigned *instruction) {
 }
 
 
+
 /* instruction partition */
 /* 10 Points */
 void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1, unsigned *r2, unsigned *r3, unsigned *funct, unsigned *offset, unsigned *jsec) {
