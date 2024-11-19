@@ -1,3 +1,5 @@
+// Ayaan Khan, Niko Krstajic, Brendan Ryan
+
 #include "spimcore.h"
 #define MEMSIZE 65536 // Define MEMSIZE as 64KB
 /* ALU */
@@ -19,8 +21,11 @@ void ALU(unsigned A, unsigned B, char ALUControl, unsigned *ALUresult, char *Zer
 /* instruction fetch */
 /* 10 Points */
 int instruction_fetch(unsigned PC, unsigned *Mem, unsigned *instruction) {
+
     if (PC % 4 != 0 || PC >= (MEMSIZE << 2)) return 1;
+
     *instruction = Mem[PC >> 2];
+
     return (*instruction == 0xdeadbeaf || *instruction == 0xbadabeaf) ? 1 : 0;
 }
 
@@ -43,6 +48,7 @@ void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1, uns
 /* instruction decode */
 /* 15 Points */
 int instruction_decode(unsigned op, struct_controls *controls) {
+    
     switch(op) {
         case 0x00: // R-type
             controls->RegDst = 1;
@@ -55,6 +61,43 @@ int instruction_decode(unsigned op, struct_controls *controls) {
             controls->ALUSrc = 0;
             controls->RegWrite = 1;
             return 0;
+        
+        case 0x08: // addi
+            controls->RegDst = 0;
+            controls->Jump = 0;
+            controls->Branch = 0;
+            controls->MemRead = 0;
+            controls->MemtoReg = 0;
+            controls->ALUOp = 0;
+            controls->MemWrite = 0;
+            controls->ALUSrc = 1;
+            controls->RegWrite = 1;
+            return 0;
+
+        case 0x0A: //stli
+            controls->RegDst = 0;
+            controls->Jump = 0;
+            controls->Branch = 0;
+            controls->MemRead = 0;
+            controls->MemtoReg = 0;
+            controls->ALUOp = 2;
+            controls->MemWrite = 0;
+            controls->ALUSrc = 1;
+            controls->RegWrite = 1;
+            return 0;
+        
+        case 0x0B: //sltiu
+            controls->RegDst = 0;
+            controls->Jump = 0;
+            controls->Branch = 0;
+            controls->MemRead = 0;
+            controls->MemtoReg = 0;
+            controls->ALUOp = 3;
+            controls->MemWrite = 0;
+            controls->ALUSrc = 1;
+            controls->RegWrite = 1;
+            return 0;
+        
 
         case 0x23: // lw
             controls->RegDst = 0;
@@ -103,6 +146,18 @@ int instruction_decode(unsigned op, struct_controls *controls) {
             controls->ALUSrc = 0;
             controls->RegWrite = 0;
             return 0;
+        
+        case 0x0F: // lui
+            controls->RegDst = 0;
+            controls->Jump = 0;
+            controls->Branch = 0;
+            controls->MemRead = 0;
+            controls->MemtoReg = 0;
+            controls->ALUOp = 6;
+            controls->MemWrite = 0;
+            controls->ALUSrc = 1;
+            controls->RegWrite = 1;
+            return 0;
 
         default:
             return 1;
@@ -128,7 +183,6 @@ void sign_extend(unsigned offset, unsigned *extended_value) {
 /* 10 Points */
 int ALU_operations(unsigned data1, unsigned data2, unsigned extended_value, unsigned funct, char ALUOp, char ALUSrc, unsigned *ALUresult, char *Zero) {
     unsigned operandB = ALUSrc ? extended_value : data2;
-
     switch(ALUOp) {
         case 0: ALU(data1, operandB, 0, ALUresult, Zero); break;
         case 1: ALU(data1, operandB, 1, ALUresult, Zero); break;
@@ -139,11 +193,13 @@ int ALU_operations(unsigned data1, unsigned data2, unsigned extended_value, unsi
         case 6: ALU(data1, operandB, 6, ALUresult, Zero); break;
         case 7:
             switch(funct) {
+                case 15: ALU(data1, data2, 8, ALUresult, Zero); break; // lui
                 case 32: ALU(data1, data2, 0, ALUresult, Zero); break; // add
                 case 34: ALU(data1, data2, 1, ALUresult, Zero); break; // sub
                 case 36: ALU(data1, data2, 4, ALUresult, Zero); break; // and
                 case 37: ALU(data1, data2, 5, ALUresult, Zero); break; // or
                 case 42: ALU(data1, data2, 2, ALUresult, Zero); break; // slt
+                case 43: ALU(data1, data2, 3, ALUresult, Zero); break; // sltu
                 default: return 1;
             }
             break;
@@ -188,45 +244,15 @@ int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsig
 
 /* Write Register */
 /* 10 Points */
-void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg)
-{
-
-    if(RegWrite == 1)
-    {
-        if(MemtoReg == 1)
-        {
-            unsigned data;
-
-            // If MemtoReg is 1 && RegWrite is 1 then data is coming from memory (memdata)
-            if(MemtoReg == 1)
-            {
-                data = memdata;
-            }
-            else
-            {
-                // If MemtoReg is 0 && RegWrite is 1 then data is coming from ALU_result (ALUresult)
-                data = ALUresult;
-            }
-
-            
-
-            // Determine the register destination
-            
-            unsigned index;
-            if(RegDst == 1)
-            {
-                index = r3;
-            }
-            else
-            {
-                index = r2;
-            }
-
-            Reg[index] = data;
-        }
+void write_register(unsigned r2, unsigned r3, unsigned memdata, unsigned ALUresult, char RegWrite, char RegDst, char MemtoReg, unsigned *Reg) {
+    if (RegWrite) {
+        unsigned writeReg = (RegDst == 1) ? r3 : r2;
+        Reg[writeReg] = (MemtoReg == 1) ? memdata : ALUresult;
     }
-
 }
+
+
+
 
 /* PC update */
 /* 10 Points */
@@ -234,7 +260,7 @@ void PC_update(unsigned jsec, unsigned extended_value, char Branch, char Jump, c
     if (Jump) {
         *PC = ((*PC & 0xF0000000) | (jsec << 2));
     } else if (Branch && Zero) {
-        *PC += (extended_value << 2);
+        *PC += (extended_value << 2) + 4;
     } else {
         *PC += 4;
     }
