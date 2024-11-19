@@ -18,18 +18,10 @@ void ALU(unsigned A, unsigned B, char ALUControl, unsigned *ALUresult, char *Zer
 
 /* instruction fetch */
 /* 10 Points */
-int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction)
-{
-    // Checking for word alignment, if not a multie of 4 it means it is not word aligned
-    if (PC % 4 != 0)
-    {
-        return -1;
-    }
-
-    // Fetching the instruction from memory
+int instruction_fetch(unsigned PC, unsigned *Mem, unsigned *instruction) {
+    if (PC % 4 != 0 || PC >= (MEMSIZE << 2)) return 1;
     *instruction = Mem[PC >> 2];
-
-    return 0;
+    return (*instruction == 0xdeadbeaf || *instruction == 0xbadabeaf) ? 1 : 0;
 }
 
 
